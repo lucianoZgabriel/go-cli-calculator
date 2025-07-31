@@ -73,6 +73,76 @@ func showHistory() {
 	fmt.Println()
 }
 
+func exportToJSON(filename string) {
+	if len(calculationHistory) == 0 {
+		fmt.Println("No calculations to export.")
+		return
+	}
+
+	data, err := json.MarshalIndent(calculationHistory, "", "  ")
+	if err != nil {
+		fmt.Printf("Error marshaling JSON: %v\n", err)
+		return
+	}
+
+	err = os.WriteFile(filename, data, 0644)
+	if err != nil {
+		fmt.Printf("Error writing file: %v\n", err)
+		return
+	}
+
+	fmt.Printf("History exported to %s (%d calculations)\n", filename, len(calculationHistory))
+}
+
+func exportToCSV(filename string) {
+	if len(calculationHistory) == 0 {
+		fmt.Println("No calculations to export.")
+		return
+	}
+
+	var content strings.Builder
+	content.WriteString("Expression,Result,Timestamp\n")
+
+	for _, entry := range calculationHistory {
+		content.WriteString(fmt.Sprintf("\"%s\",%.2f,\"%s\"\n",
+			entry.Expression, entry.Result, entry.Timestamp))
+	}
+
+	err := os.WriteFile(filename, []byte(content.String()), 0644)
+	if err != nil {
+		fmt.Printf("Error writing file: %v\n", err)
+		return
+	}
+
+	fmt.Printf("History exported to %s (%d calculations)\n", filename, len(calculationHistory))
+}
+
+func exportToTXT(filename string) {
+	if len(calculationHistory) == 0 {
+		fmt.Println("No calculations to export.")
+		return
+	}
+
+	var content strings.Builder
+	content.WriteString("Calculator History Report\n")
+	content.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format("2006-01-02 15:04:05")))
+
+	for i, entry := range calculationHistory {
+		content.WriteString(fmt.Sprintf("%d. %s = %.2f [%s]\n",
+			i+1, entry.Expression, entry.Result, entry.Timestamp))
+	}
+
+	content.WriteString(fmt.Sprintf("\nTotal calculations: %d\n", len(calculationHistory)))
+
+	err := os.WriteFile(filename, []byte(content.String()), 0644)
+	if err != nil {
+		fmt.Printf("Error writing file: %v\n", err)
+		return
+	}
+
+	fmt.Printf("History exported to %s (%d calculations)\n", filename, len(calculationHistory))
+}
+
 func getOperationSymbol(op string) string {
 	switch op {
 	case "add":
@@ -250,6 +320,9 @@ func main() {
 	version := flag.Bool("version", false, "Show version information")
 	interactive := flag.Bool("interactive", false, "Start interactive mode")
 	showHist := flag.Bool("show-history", false, "Show calculation history")
+	exportJSON := flag.String("export-json", "", "Export history to JSON file")
+	exportCSV := flag.String("export-csv", "", "Export history to CSV file")
+	exportTXT := flag.String("export-txt", "", "Export history to TXT report")
 
 	flag.Parse()
 
@@ -267,6 +340,21 @@ func main() {
 
 	if *showHist {
 		showHistory()
+		return
+	}
+
+	if *exportJSON != "" {
+		exportToJSON(*exportJSON)
+		return
+	}
+
+	if *exportCSV != "" {
+		exportToCSV(*exportCSV)
+		return
+	}
+
+	if *exportTXT != "" {
+		exportToTXT(*exportTXT)
 		return
 	}
 
