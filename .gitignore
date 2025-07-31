@@ -1,0 +1,20 @@
+# Binário da aplicação
+calculatorV1
+calculatorV1.exe
+
+# Arquivos temporários do Go
+*.test
+*.out
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+#Planejamento
+go_calculator_plan.md
+CLAUDE.md
+.claude
