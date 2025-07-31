@@ -3,12 +3,75 @@ package main
 import (
 	"bufio"
 	"calculator/calculator"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
+
+type HistoryEntry struct {
+	Expression string  `json:"expression"`
+	Result     float64 `json:"result"`
+	Timestamp  string  `json:"timestamp"`
+}
+
+var calculationHistory []HistoryEntry
+
+const historyFile = "calculator_history.json"
+
+func loadHistory() {
+	data, err := os.ReadFile(historyFile)
+	if err != nil {
+		// Arquivo não existe ou erro ao ler - começar com histórico vazio
+		calculationHistory = []HistoryEntry{}
+		return
+	}
+
+	err = json.Unmarshal(data, &calculationHistory)
+	if err != nil {
+		fmt.Printf("Warning: Could not load history: %v\n", err)
+		calculationHistory = []HistoryEntry{}
+	}
+}
+
+func saveHistory() {
+	data, err := json.MarshalIndent(calculationHistory, "", " ")
+	if err != nil {
+		fmt.Printf("Warning: Could not save history: %v\n", err)
+		return
+	}
+
+	err = os.WriteFile(historyFile, data, 0644)
+	if err != nil {
+		fmt.Printf("Warning: Could not write history file: %v\n", err)
+	}
+}
+
+func addToHistory(expression string, result float64) {
+	entry := HistoryEntry{
+		Expression: expression,
+		Result:     result,
+		Timestamp:  time.Now().Format("2006-01-02 15:04:05"),
+	}
+	calculationHistory = append(calculationHistory, entry)
+	saveHistory()
+}
+
+func showHistory() {
+	if len(calculationHistory) == 0 {
+		fmt.Println("No calculation in history")
+		return
+	}
+
+	fmt.Println("\n--- Calculation History ---")
+	for i, entry := range calculationHistory {
+		fmt.Printf("%d. %s = %.2f [%s]\n", i+1, entry.Expression, entry.Result, entry.Timestamp)
+	}
+	fmt.Println()
+}
 
 func getOperationSymbol(op string) string {
 	switch op {
@@ -97,7 +160,7 @@ func parseExpression(input string) (float64, string, float64, error) {
 
 func runInteractiveMode() {
 	fmt.Println("Calculator v1.0.0 - Interactive Mode")
-	fmt.Println("Type 'exit' to quit")
+	fmt.Println("Type 'exit' to quit, 'history' to show calculation history")
 	fmt.Println("Usage: number operation number (e.g., 10 + 5)")
 	fmt.Println()
 
@@ -118,6 +181,11 @@ func runInteractiveMode() {
 		if input == "" {
 			continue
 		}
+		if input == "history" {
+			showHistory()
+			continue
+		}
+
 		num1, operation, num2, err := parseExpression(input)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
@@ -128,15 +196,19 @@ func runInteractiveMode() {
 		switch operation {
 		case "add":
 			result := calc.Add(num1, num2)
+			addToHistory(input, result)
 			fmt.Printf("%.2f\n", result)
 		case "sub":
 			result := calc.Subtract(num1, num2)
+			addToHistory(input, result)
 			fmt.Printf("%.2f\n", result)
 		case "mul":
 			result := calc.Multiply(num1, num2)
+			addToHistory(input, result)
 			fmt.Printf("%.2f\n", result)
 		case "div":
 			result, err := calc.Divide(num1, num2)
+			addToHistory(input, result)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				continue
@@ -144,6 +216,7 @@ func runInteractiveMode() {
 			fmt.Printf("%.2f\n", result)
 		case "sqrt":
 			result, err := calc.Sqrt(num1)
+			addToHistory(input, result)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				continue
@@ -151,12 +224,15 @@ func runInteractiveMode() {
 			fmt.Printf("%.2f\n", result)
 		case "pow":
 			result := calc.Pow(num1, num2)
+			addToHistory(input, result)
 			fmt.Printf("%.2f\n", result)
 		case "sin":
 			result := calc.Sin(num1)
+			addToHistory(input, result)
 			fmt.Printf("%.2f\n", result)
 		case "cos":
 			result := calc.Cos(num1)
+			addToHistory(input, result)
 			fmt.Printf("%.2f\n", result)
 		default:
 			fmt.Printf("Unknown operation: %s\n", operation)
@@ -173,8 +249,11 @@ func main() {
 	verbose := flag.Bool("verbose", false, "Show detailed calculation")
 	version := flag.Bool("version", false, "Show version information")
 	interactive := flag.Bool("interactive", false, "Start interactive mode")
+	showHist := flag.Bool("show-history", false, "Show calculation history")
 
 	flag.Parse()
+
+	loadHistory()
 
 	if *version {
 		fmt.Println("Calculator v1.0.0")
@@ -183,6 +262,11 @@ func main() {
 
 	if *interactive {
 		runInteractiveMode()
+		return
+	}
+
+	if *showHist {
+		showHistory()
 		return
 	}
 
@@ -203,12 +287,15 @@ func main() {
 	switch *operation {
 	case "add":
 		result := calc.Add(*num1, *num2)
+		addToHistory(fmt.Sprintf("%.2f + %.2f", *num1, *num2), result)
 		printResult(result, *precision, *verbose, *num1, *num2, *operation)
 	case "sub":
 		result := calc.Subtract(*num1, *num2)
+		addToHistory(fmt.Sprintf("%.2f + %.2f", *num1, *num2), result)
 		printResult(result, *precision, *verbose, *num1, *num2, *operation)
 	case "mul":
 		result := calc.Multiply(*num1, *num2)
+		addToHistory(fmt.Sprintf("%.2f + %.2f", *num1, *num2), result)
 		printResult(result, *precision, *verbose, *num1, *num2, *operation)
 	case "div":
 		result, err := calc.Divide(*num1, *num2)
@@ -216,6 +303,7 @@ func main() {
 			fmt.Printf("Erro: %v\n", err)
 			os.Exit(1)
 		}
+		addToHistory(fmt.Sprintf("%.2f + %.2f", *num1, *num2), result)
 		printResult(result, *precision, *verbose, *num1, *num2, *operation)
 	case "sqrt":
 		result, err := calc.Sqrt(*num1)
@@ -223,15 +311,19 @@ func main() {
 			fmt.Printf("Erro: %v\n", err)
 			os.Exit(1)
 		}
+		addToHistory(fmt.Sprintf("sqrt(%.2f)", *num1), result)
 		printResult(result, *precision, *verbose, *num1, 0, *operation)
 	case "pow":
 		result := calc.Pow(*num1, *num2)
+		addToHistory(fmt.Sprintf("%.2f ^ %.2f", *num1, *num2), result)
 		printResult(result, *precision, *verbose, *num1, *num2, *operation)
 	case "sin":
 		result := calc.Sin(*num1)
+		addToHistory(fmt.Sprintf("sin(%.2f)", *num1), result)
 		printResult(result, *precision, *verbose, *num1, 0, *operation)
 	case "cos":
 		result := calc.Cos(*num1)
+		addToHistory(fmt.Sprintf("cos(%.2f)", *num1), result)
 		printResult(result, *precision, *verbose, *num1, 0, *operation)
 	default:
 		fmt.Printf("Operação inválida: %s\n", *operation)
