@@ -6,9 +6,6 @@ import (
 	"os"
 )
 
-// HistoryManager interface (já definida em interactive.go, mas boa prática ter aqui também)
-// Você pode remover de interactive.go se quiser
-
 // RunCLIMode executa um cálculo único via flags de linha de comando
 func RunCLIMode(historyMgr HistoryManager, num1, num2 float64, operation string, precision int, verbose bool) {
 	// Validação básica

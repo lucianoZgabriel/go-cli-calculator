@@ -9,7 +9,6 @@ import (
 )
 
 // HistoryManager é uma interface para gerenciar histórico
-// (vamos implementar isso depois quando criarmos o package history)
 type HistoryManager interface {
 	Add(expression string, result float64)
 	Show()
